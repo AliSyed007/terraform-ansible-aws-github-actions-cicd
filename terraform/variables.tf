@@ -17,6 +17,12 @@ variable "project_name" {
 }
 
 variable "my_ip_cidr" {
-  description = "Your public IP in CIDR format for SSH access"
+  description = "Your public IP in CIDR format"
   type        = string
+}
+
+variable "allow_github_actions_ssh" {
+  description = "Temporarily allow SSH from anywhere so GitHub Actions can deploy"
+  type        = bool
+  default     = true
 }

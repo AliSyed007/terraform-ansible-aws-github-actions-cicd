@@ -14,6 +14,10 @@ data "aws_ami" "ubuntu" {
   }
 }
 
+locals {
+  ssh_cidr_blocks = var.allow_github_actions_ssh ? ["0.0.0.0/0"] : [var.my_ip_cidr]
+}
+
 resource "aws_key_pair" "devops_key" {
   key_name   = "devops-terraform-key"
   public_key = file("~/.ssh/devops-terraform-key.pub")
@@ -21,14 +25,14 @@ resource "aws_key_pair" "devops_key" {
 
 resource "aws_security_group" "web_sg" {
   name        = "${var.project_name}-sg"
-  description = "Allow SSH from my IP and HTTP from the internet"
+  description = "Allow SSH and HTTP access"
 
   ingress {
-    description = "SSH from my IP"
+    description = "SSH access"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [var.my_ip_cidr]
+    cidr_blocks = local.ssh_cidr_blocks
   }
 
   ingress {
