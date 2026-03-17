@@ -1,0 +1,18 @@
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/*.tfplan
+
+# Ansible
+ansible/*.retry
+
+# OS / editor
+.DS_Store
+*.swp
+*.swo
+
+# Secrets
+*.pem
+.env

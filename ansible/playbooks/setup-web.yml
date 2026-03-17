@@ -1,0 +1,144 @@
+---
+- name: Configure web server for CI/CD project
+  hosts: web
+  become: true
+
+  vars:
+    app_root: /var/www/myapp
+    releases_dir: /var/www/myapp/releases
+    current_link: /var/www/myapp/current
+    initial_dir: /var/www/myapp/initial
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+
+    - name: Create app root directory
+      ansible.builtin.file:
+        path: "{{ app_root }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: "0755"
+
+    - name: Create releases directory
+      ansible.builtin.file:
+        path: "{{ releases_dir }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: "0755"
+
+    - name: Create initial directory
+      ansible.builtin.file:
+        path: "{{ initial_dir }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: "0755"
+
+    - name: Create initial placeholder index.html
+      ansible.builtin.copy:
+        dest: "{{ initial_dir }}/index.html"
+        owner: www-data
+        group: www-data
+        mode: "0644"
+        content: |
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Initial Server Page</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                background: #0f172a;
+                color: #e2e8f0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                margin: 0;
+              }
+              .box {
+                background: #1e293b;
+                padding: 40px;
+                border-radius: 12px;
+                max-width: 700px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+              }
+              h1 {
+                color: #38bdf8;
+                margin-top: 0;
+              }
+              p {
+                line-height: 1.7;
+              }
+              code {
+                background: #334155;
+                padding: 2px 6px;
+                border-radius: 6px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="box">
+              <h1>Nginx is working</h1>
+              <p>This is the initial placeholder page created by Ansible.</p>
+              <p>The CI/CD pipeline will later deploy the real release into:</p>
+              <p><code>/var/www/myapp/releases/&lt;release-id&gt;</code></p>
+              <p>and switch:</p>
+              <p><code>/var/www/myapp/current</code></p>
+            </div>
+          </body>
+          </html>
+
+    - name: Create current symlink
+      ansible.builtin.file:
+        src: "{{ initial_dir }}"
+        dest: "{{ current_link }}"
+        state: link
+        force: true
+
+    - name: Deploy nginx site configuration
+      ansible.builtin.template:
+        src: ../templates/nginx-site.conf.j2
+        dest: /etc/nginx/sites-available/myapp.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload nginx
+
+    - name: Enable nginx site
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/myapp.conf
+        dest: /etc/nginx/sites-enabled/myapp.conf
+        state: link
+        force: true
+      notify: Reload nginx
+
+    - name: Remove default nginx site
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: Reload nginx
+
+    - name: Ensure nginx is enabled and running
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
